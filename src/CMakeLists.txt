@@ -3,9 +3,11 @@ set(RN_NOISE_SRC
         celt_lpc.c
         pitch.c
         rnn.c
-        rnn_data.c
         kiss_fft.c
-        rnn_reader.c)
+        nnet.c
+        nnet_default.c
+        parse_lpcnet_weights.c
+        rnnoise_data.c)
 
 
 set(LIBRARY_OUTPUT_PATH "${PROJECT_BINARY_DIR}/lib")

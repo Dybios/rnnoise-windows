@@ -29,26 +29,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -180,11 +180,18 @@
     <ClInclude Include="..\src\celt_lpc.h" />
     <ClInclude Include="..\src\common.h" />
     <ClInclude Include="..\src\kiss_fft.h" />
+    <ClInclude Include="..\src\nnet.h" />
+    <ClInclude Include="..\src\nnet_arch.h" />
     <ClInclude Include="..\src\opus_types.h" />
     <ClInclude Include="..\src\pitch.h" />
     <ClInclude Include="..\src\rnn.h" />
-    <ClInclude Include="..\src\rnn_data.h" />
-    <ClInclude Include="..\src\tansig_table.h" />
+    <ClInclude Include="..\src\rnnoise_data.h" />
+    <ClInclude Include="..\src\vec.h" />
+    <ClInclude Include="..\src\vec_avx.h" />
+    <ClInclude Include="..\src\vec_neon.h" />
+    <ClInclude Include="..\src\x86\dnn_x86.h" />
+    <ClInclude Include="..\src\x86\x86cpu.h" />
+    <ClInclude Include="..\src\x86\x86_arch_macros.h" />
     <ClInclude Include="..\src\_kiss_fft_guts.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="rnnoise_static.h" />
@@ -193,10 +200,15 @@
     <ClCompile Include="..\src\celt_lpc.c" />
     <ClCompile Include="..\src\denoise.c" />
     <ClCompile Include="..\src\kiss_fft.c" />
+    <ClCompile Include="..\src\nnet.c" />
+    <ClCompile Include="..\src\nnet_default.c" />
+    <ClCompile Include="..\src\parse_lpcnet_weights.c" />
     <ClCompile Include="..\src\pitch.c" />
     <ClCompile Include="..\src\rnn.c" />
-    <ClCompile Include="..\src\rnn_data.c" />
-    <ClCompile Include="..\src\rnn_reader.c" />
+    <ClCompile Include="..\src\rnnoise_data.c" />
+    <ClCompile Include="..\src\rnnoise_tables.c" />
+    <ClCompile Include="..\src\write_weights.c" />
+    <ClCompile Include="..\src\x86\x86cpu.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 from __future__ import print_function
 
@@ -20,9 +20,6 @@ import h5py
 from keras.constraints import Constraint
 from keras import backend as K
 import numpy as np
-
-import os
-import sys
 
 #import tensorflow as tf
 #from keras.backend.tensorflow_backend import set_session
@@ -82,17 +79,12 @@ model.compile(loss=[mycost, my_crossentropy],
               optimizer='adam', loss_weights=[10, 0.5])
 
 
-batch_size = 128  # 128+64 for gpu version, original version is 32 for cpu
+batch_size = 32
 
 print('Loading data...')
-if len(sys.argv) == 1:
-    print("Usage:{0} model_in.h5\n  Note that default output is mid_weights.hdf5 and final_weights.hdf5".format(sys.argv[0]))
-    exit(1)
-# with h5py.File('/share/tmp/training.h5', 'r') as hf:
-# with h5py.File('training.h5', 'r') as hf:
-with h5py.File(sys.argv[1], 'r') as hf:
+with h5py.File('training.h5', 'r') as hf:
     all_data = hf['data'][:]
-print("load {} successful...".format(sys.argv[1]))
+print('done.')
 
 window_size = 2000
 
@@ -110,30 +102,15 @@ noise_train = np.reshape(noise_train, (nb_sequences, window_size, 22))
 vad_train = np.copy(all_data[:nb_sequences*window_size, 86:87])
 vad_train = np.reshape(vad_train, (nb_sequences, window_size, 1))
 
-all_data = 0
+all_data = 0;
 #x_train = x_train.astype('float32')
 #y_train = y_train.astype('float32')
 
 print(len(x_train), 'train sequences. x shape =', x_train.shape, 'y shape = ', y_train.shape)
 
 print('Train...')
-
-midWeightPath = './mid_weights.hdf5'
-endEpochHookCB = keras.callbacks.ModelCheckpoint( midWeightPath,
-                monitor = 'val_loss',
-                save_weights_only = True,
-                verbose = 1,
-                save_best_only = True,
-                period = 1 )
-
-if os.path.exists(midWeightPath):
-    model.load_weights( midWeightPath )
-    print("checkpoint_loaded")
-
-model.fit( x_train, [ y_train, vad_train ],
-          batch_size = batch_size,
-          epochs = 360,
-          initial_epoch = 0,
-          validation_split = 0.1,
-          callbacks = [ endEpochHookCB ] )
-model.save("./final_weights.hdf5")
+model.fit(x_train, [y_train, vad_train],
+          batch_size=batch_size,
+          epochs=120,
+          validation_split=0.1)
+model.save("weights.hdf5")

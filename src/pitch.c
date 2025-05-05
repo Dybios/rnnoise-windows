@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2007-2008 CSIRO
+/* Copyright (c) 2007-2008 CSIRO
    Copyright (c) 2007-2009 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /**
@@ -37,10 +37,7 @@
 
 #include "pitch.h"
 #include "common.h"
-//#include "modes.h"
-//#include "stack_alloc.h"
-//#include "mathops.h"
-
+#include "denoise.h"
 #include "celt_lpc.h"
 #include "math.h"
 
@@ -146,7 +143,7 @@ static void celt_fir5(const opus_val16 *x,
 }
 
 
-void pitch_downsample(celt_sig *x[], opus_val16 *x_lp,
+void rnn_pitch_downsample(celt_sig *x[], opus_val16 *x_lp,
       int len, int C)
 {
    int i;
@@ -181,7 +178,7 @@ void pitch_downsample(celt_sig *x[], opus_val16 *x_lp,
       x_lp[0] += SHR32(HALF32(HALF32(x[1][1])+x[1][0]), shift);
    }
 
-   _celt_autocorr(x_lp, ac, NULL, 0,
+   rnn_autocorr(x_lp, ac, NULL, 0,
                   4, len>>1);
 
    /* Noise floor -40 dB */
@@ -201,7 +198,7 @@ void pitch_downsample(celt_sig *x[], opus_val16 *x_lp,
 #endif
    }
 
-   _celt_lpc(lpc, ac, 4);
+   rnn_lpc(lpc, ac, 4);
    for (i=0;i<4;i++)
    {
       tmp = MULT16_16_Q15(QCONST16(.9f,15), tmp);
@@ -216,7 +213,7 @@ void pitch_downsample(celt_sig *x[], opus_val16 *x_lp,
    celt_fir5(x_lp, lpc2, x_lp, len>>1, mem);
 }
 
-void celt_pitch_xcorr(const opus_val16 *_x, const opus_val16 *_y,
+void rnn_pitch_xcorr(const opus_val16 *_x, const opus_val16 *_y,
       opus_val32 *xcorr, int len, int max_pitch)
 {
 
@@ -281,7 +278,7 @@ void celt_pitch_xcorr(const opus_val16 *_x, const opus_val16 *_y,
 #endif
 }
 
-void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
+void rnn_pitch_search(const opus_val16 *x_lp, opus_val16 *y,
                   int len, int max_pitch, int *pitch)
 {
    int i, j;
@@ -293,18 +290,16 @@ void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
    int shift=0;
 #endif
    int offset;
+   opus_val16 x_lp4[PITCH_FRAME_SIZE>>2];
+   opus_val16 y_lp4[(PITCH_FRAME_SIZE+PITCH_MAX_PERIOD)>>2];
+   opus_val32 xcorr[PITCH_MAX_PERIOD>>1];
 
+   celt_assert(len <= PITCH_FRAME_SIZE);
+   celt_assert(max_pitch <= PITCH_MAX_PERIOD);
    celt_assert(len>0);
    celt_assert(max_pitch>0);
    lag = len+max_pitch;
 
-   opus_val16 *x_lp4 = (opus_val16 *)malloc( (len >> 2) * sizeof(opus_val16) ) ;	
-   opus_val16 *y_lp4 = (opus_val16 *)malloc( (lag >> 2) * sizeof(opus_val16) ) ;
-   opus_val32 *xcorr = (opus_val32 *)malloc((max_pitch>>1) * sizeof(opus_val32) );
-
-   //opus_val16 x_lp4[len>>2];
-   //opus_val16 y_lp4[lag>>2];
-   //opus_val32 xcorr[max_pitch>>1];
 
    /* Downsample by 2 again */
    for (j=0;j<len>>2;j++)
@@ -334,7 +329,7 @@ void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
 #ifdef FIXED_POINT
    maxcorr =
 #endif
-   celt_pitch_xcorr(x_lp4, y_lp4, xcorr, len>>2, max_pitch>>2);
+   rnn_pitch_xcorr(x_lp4, y_lp4, xcorr, len>>2, max_pitch>>2);
 
    find_best_pitch(xcorr, y_lp4, len>>2, max_pitch>>2, best_pitch
 #ifdef FIXED_POINT
@@ -387,11 +382,6 @@ void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
       offset = 0;
    }
    *pitch = 2*best_pitch[0]-offset;
-
-
-   free(x_lp4);			// �ͷ�
-   free(y_lp4);
-   free(xcorr);
 }
 
 #ifdef FIXED_POINT
@@ -430,7 +420,7 @@ static opus_val16 compute_pitch_gain(opus_val32 xy, opus_val32 xx, opus_val32 yy
 #endif
 
 static const int second_check[16] = {0, 0, 3, 2, 3, 2, 5, 2, 3, 2, 3, 2, 5, 2, 3, 2};
-opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
+opus_val16 rnn_remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
       int N, int *T0_, int prev_period, opus_val16 prev_gain)
 {
    int k, i, T, T0;
@@ -441,6 +431,9 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
    opus_val32 best_xy, best_yy;
    int offset;
    int minperiod0;
+   opus_val32 yy_lookup[PITCH_MAX_PERIOD+1];
+   
+   celt_assert(maxperiod <= PITCH_MAX_PERIOD);
 
    minperiod0 = minperiod;
    maxperiod /= 2;
@@ -453,9 +446,6 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
       *T0_=maxperiod-1;
 
    T = T0 = *T0_;
-   //opus_val32 yy_lookup[maxperiod+1];
-   opus_val32 *yy_lookup = (opus_val32*)malloc(sizeof(opus_val32) * (maxperiod+1) );
-
    dual_inner_prod(x, x, x-T0, N, &xx, &xy);
    yy_lookup[0] = xx;
    yy=xx;
@@ -534,8 +524,5 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
 
    if (*T0_<minperiod0)
       *T0_=minperiod0;
-
-
-   free(yy_lookup);			// free
    return pg;
 }
